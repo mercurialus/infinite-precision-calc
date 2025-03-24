@@ -1,3 +1,9 @@
+#shell files for ease
+toucher.sh
+
+#build folder
+build
+
 # Prerequisites
 *.d
 

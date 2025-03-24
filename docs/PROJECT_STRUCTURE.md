@@ -27,7 +27,6 @@
 │   ├── DESIGN.md                    # Design decisions & architecture
 │   ├── USAGE.md                      # How to use the calculator
 │   ├── PROJECT_STRUCTURE.md         # Directory structure & purpose of each file
-│   ├── CONTRIBUTING.md              # Guidelines for contributors (optional)
 │
 │── config/                          # Configuration files (Optional, if CLI has settings)
 │   ├── default_settings.json        # Default configuration settings (Optional)
