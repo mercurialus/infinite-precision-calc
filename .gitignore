@@ -1,8 +1,11 @@
 #shell files for ease
 toucher.sh
 
-#build folder
+#build and ide folders
 build
+cmake-build-debug
+.idea
+.vscode
 
 # Prerequisites
 *.d
