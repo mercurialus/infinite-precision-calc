@@ -21,6 +21,8 @@ static std::string karatsubaMSD(const std::string &A, const std::string &B);
 BigInt karatsubaMultiply(const BigInt &x, const BigInt &y)
 {
     // Base or zero check
+    if (x.size() < 32 && y.size() < 32)
+        return BigInt(x * y);
     if (x.value == "0" || y.value == "0")
         return BigInt("0");
 
