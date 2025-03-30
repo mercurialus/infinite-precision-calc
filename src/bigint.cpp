@@ -3,6 +3,7 @@
 // #include "bigint_karatsuba.hpp"
 #include <algorithm>
 #include <cctype>
+#include <vector>
 
 void BigInt::StripZeros()
 {
@@ -11,6 +12,11 @@ void BigInt::StripZeros()
 
     if (value.size() == 1 && value[0] == '0')
         isNegative = false;
+}
+
+int BigInt::size() const
+{
+    return value.size();
 }
 
 BigInt::BigInt() : value("0"), isNegative(false) {}
@@ -49,12 +55,12 @@ BigInt BigInt::addAbsolute(const BigInt &BigInt1, const BigInt &BigInt2)
     result.value.clear();
 
     int carry = 0;
-    int maxLen = std::max(BigInt1.value.size(), BigInt2.value.size());
+    int maxLen = std::max(BigInt1.size(), BigInt2.size());
 
     for (int i = 0; i < maxLen || carry; ++i)
     {
-        int val1 = (i < BigInt1.value.size()) ? BigInt1.value[i] - '0' : 0;
-        int val2 = (i < BigInt2.value.size()) ? BigInt2.value[i] - '0' : 0;
+        int val1 = (i < BigInt1.size()) ? BigInt1.value[i] - '0' : 0;
+        int val2 = (i < BigInt2.size()) ? BigInt2.value[i] - '0' : 0;
 
         int sum = val1 + val2 + carry;
         result.value.push_back(static_cast<char>(sum % 10 + '0'));
@@ -71,11 +77,11 @@ BigInt BigInt::subAbsolute(const BigInt &BigInt1, const BigInt &BigInt2)
     result.value.clear();
 
     int borrow = 0;
-    int maxSize = std::max(BigInt1.value.size(), BigInt2.value.size());
+    int maxSize = std::max(BigInt1.size(), BigInt2.size());
     for (int i = 0; i < maxSize; ++i)
     {
-        int digit1 = (i < BigInt1.value.size()) ? BigInt1.value[i] - '0' : 0;
-        int digit2 = (i < BigInt2.value.size()) ? BigInt2.value[i] - '0' : 0;
+        int digit1 = (i < BigInt1.size()) ? BigInt1.value[i] - '0' : 0;
+        int digit2 = (i < BigInt2.size()) ? BigInt2.value[i] - '0' : 0;
 
         int difference = digit1 - digit2 - borrow;
         if (difference < 0)
@@ -140,17 +146,44 @@ BigInt BigInt::operator-(const BigInt &other) const
 
 BigInt BigInt::operator*(const BigInt &other) const
 {
-    return other;
+    BigInt result;
+    int n = value.size();
+    int m = other.size();
+    std::vector<int> product(n + m, 0);
+    result.isNegative = (isNegative != other.isNegative);
+
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < m; ++j)
+        {
+            product[i + j] += (value[i] - '0') * (other.value[j] - '0');
+        }
+    }
+    for (int i = 0; i < product.size(); ++i)
+    {
+        if (product[i] >= 10)
+        {
+            if (i + 1 < product.size())
+                product[i + 1] += product[i] / 10;
+            product[i] %= 10;
+        }
+    }
+    result.value = "";
+    for (int i = 0; i < product.size(); ++i)
+        result.value.push_back(product[i] + '0');
+
+    result.StripZeros();
+    return result;
 }
 
 int BigInt::compareAbsolute(const BigInt &BigInt1, const BigInt &BigInt2)
 {
-    if (BigInt1.value.size() > BigInt2.value.size())
+    if (BigInt1.size() > BigInt2.size())
         return 1;
-    if (BigInt1.value.size() < BigInt2.value.size())
+    if (BigInt1.size() < BigInt2.size())
         return -1;
 
-    for (int i = BigInt1.value.size() - 1; i >= 0; --i)
+    for (int i = BigInt1.size() - 1; i >= 0; --i)
     {
         if (BigInt1.value[i] > BigInt2.value[i])
             return 1;
@@ -164,7 +197,7 @@ std::ostream &operator<<(std::ostream &out, const BigInt &val)
 {
     if (val.isNegative)
         out << "-";
-    for (int i = val.value.size() - 1; i >= 0; --i)
+    for (int i = val.size() - 1; i >= 0; --i)
         out << val.value[i];
     return out;
 }
@@ -174,4 +207,31 @@ std::istream &operator>>(std::istream &in, BigInt &val)
     in >> s;
     val = BigInt(s);
     return in;
+}
+bool BigInt::operator==(const BigInt &other) const
+{
+    return (value == other.value && isNegative == other.isNegative);
+}
+bool BigInt::operator!=(const BigInt &other) const
+{
+    return !(*this == other);
+}
+bool BigInt::operator<(const BigInt &other) const
+{
+    if (isNegative != other.isNegative)
+        return isNegative;
+    int c = compareAbsolute(*this, other);
+    return isNegative ? (c > 0) : (c < 0);
+}
+bool BigInt::operator>(const BigInt &other) const
+{
+    return other < *this;
+}
+bool BigInt::operator<=(const BigInt &other) const
+{
+    return !(*this > other);
+}
+bool BigInt::operator>=(const BigInt &other) const
+{
+    return !(*this < other);
 }

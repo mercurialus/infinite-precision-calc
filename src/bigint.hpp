@@ -37,8 +37,15 @@ public:
     friend std::ostream &operator<<(std::ostream &out, const BigInt &val);
     friend std::istream &operator>>(std::istream &in, BigInt &val);
 
-    // Maybe I will implement this
+    // Friend Functions for easy implementation
+    friend BigInt karatsubaMultiply(const BigInt &x, const BigInt &y);
+
+    // Utils
     std::string toString() const;
+    int size() const;
+    friend BigInt mulBy10power_reversed(BigInt &x, int m);
+    friend BigInt padRight(BigInt &BigInt1, int n);
+    friend BigInt padLeft(BigInt &BigInt1, int n);
 };
 
 #endif /*BIGINT_HPP*/
