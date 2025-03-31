@@ -2,24 +2,27 @@
 
 set -e # Exit on first error
 
-# Remove the build directory if it exists
-if [[ -d "build" ]]; then
-  echo "Removing existing build directory..."
-  rm -rf build
+# If no arguments are passed, build the project
+if [[ $# -eq 0 ]]; then
+  # Remove the build directory if it exists
+  if [[ -d "build" ]]; then
+    echo "Removing existing build directory..."
+    rm -rf build
+  fi
+
+  # Configure the project with CMake
+  echo "Configuring project with CMake..."
+  cmake -S . -B build
+
+  # Build the project
+  echo "Building project..."
+  cmake --build build
 fi
-
-# Configure the project with CMake
-echo "Configuring project with CMake..."
-cmake -S . -B build
-
-# Build the project
-echo "Building project..."
-cmake --build build
 
 # Run the resulting binary if it exists
 if [[ -x "build/bin/infcalc" ]]; then
   echo "Running program..."
-  ./build/bin/infcalc
+  ./build/bin/infcalc "$@"
 else
   echo "Error: Binary 'build/bin/infcalc' not found or not executable."
   exit 1

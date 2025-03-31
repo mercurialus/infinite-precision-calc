@@ -1,206 +1,264 @@
 #include "bigint.hpp"
-// #include "bigint_fft.hpp"
-// #include "bigint_karatsuba.hpp"
+#include <sstream>
+#include <iomanip>
 #include <algorithm>
-#include <cctype>
-#include <vector>
+#include <stdexcept>
 
-void BigInt::StripZeros()
+// Constructors
+BigInt::BigInt() : isNegative(false) {}
+
+BigInt::BigInt(const std::string &number)
 {
-    while (value.size() > 1 && value.back() == '0')
-        value.pop_back();
+    isNegative = !number.empty() && number[0] == '-';
 
-    if (value.size() == 1 && value[0] == '0')
-        isNegative = false;
+    int start = isNegative ? 1 : 0;
+    for (int i = number.size(); i > start; i -= 4)
+    {
+        int end = i;
+        int begin = std::max(start, i - 4);
+        std::string segment = number.substr(begin, end - begin);
+        value.push_back(std::stoi(segment));
+    }
+
+    StripZeros();
 }
-
-int BigInt::size() const
-{
-    return value.size();
-}
-
-BigInt::BigInt() : value("0"), isNegative(false) {}
 
 BigInt::BigInt(int number)
 {
     isNegative = number < 0;
     number = std::abs(number);
-    value = std::to_string(number);
-    std::reverse(value.begin(), value.end());
+
+    while (number > 0)
+    {
+        value.push_back(number % 10000);
+        number /= 10000;
+    }
+
+    if (value.empty())
+        value.push_back(0);
 }
 
-BigInt::BigInt(const std::string &number)
+// Remove leading zeros
+void BigInt::StripZeros()
 {
-    int start = 0; /*If bigint negative -> start=1 else start=0*/
+    while (value.size() > 1 && value.back() == 0)
+    {
+        value.pop_back();
+    }
 
-    isNegative = number[0] == '-';
-
-    if (isNegative)
-        start = 1;
-
-    value = "";
-
-    int big_integer_length = number.length();
-
-    for (int i = big_integer_length - 1; i >= start; --i)
-        if (isdigit(number[i]))
-            value += number[i];
-
-    StripZeros();
+    if (value.size() == 1 && value[0] == 0)
+    {
+        isNegative = false;
+    }
 }
 
-BigInt BigInt::addAbsolute(const BigInt &BigInt1, const BigInt &BigInt2)
+// Compare absolute values
+int BigInt::compareAbsolute(const BigInt &a, const BigInt &b)
+{
+    if (a.value.size() != b.value.size())
+        return a.value.size() > b.value.size() ? 1 : -1;
+
+    for (int i = a.value.size() - 1; i >= 0; --i)
+    {
+        if (a.value[i] != b.value[i])
+            return a.value[i] > b.value[i] ? 1 : -1;
+    }
+
+    return 0;
+}
+
+// Addition ignoring signs
+BigInt BigInt::addAbsolute(const BigInt &a, const BigInt &b)
 {
     BigInt result;
     result.value.clear();
 
-    int carry = 0;
-    int maxLen = std::max(BigInt1.size(), BigInt2.size());
+    size_t maxSize = std::max(a.value.size(), b.value.size());
+    uint32_t carry = 0;
 
-    for (int i = 0; i < maxLen || carry; ++i)
+    for (size_t i = 0; i < maxSize || carry != 0; ++i)
     {
-        int val1 = (i < BigInt1.size()) ? BigInt1.value[i] - '0' : 0;
-        int val2 = (i < BigInt2.size()) ? BigInt2.value[i] - '0' : 0;
+        uint32_t aVal = i < a.value.size() ? a.value[i] : 0;
+        uint32_t bVal = i < b.value.size() ? b.value[i] : 0;
 
-        int sum = val1 + val2 + carry;
-        result.value.push_back(static_cast<char>(sum % 10 + '0'));
-        carry = sum / 10;
+        uint32_t sum = aVal + bVal + carry;
+        result.value.push_back(sum % 10000);
+        carry = sum / 10000;
     }
 
-    result.StripZeros();
     return result;
 }
 
-BigInt BigInt::subAbsolute(const BigInt &BigInt1, const BigInt &BigInt2)
+// Subtraction ignoring signs: assumes a >= b
+BigInt BigInt::subAbsolute(const BigInt &a, const BigInt &b)
 {
     BigInt result;
     result.value.clear();
 
-    int borrow = 0;
-    int maxSize = std::max(BigInt1.size(), BigInt2.size());
-    for (int i = 0; i < maxSize; ++i)
-    {
-        int digit1 = (i < BigInt1.size()) ? BigInt1.value[i] - '0' : 0;
-        int digit2 = (i < BigInt2.size()) ? BigInt2.value[i] - '0' : 0;
+    uint32_t borrow = 0;
 
-        int difference = digit1 - digit2 - borrow;
-        if (difference < 0)
+    for (size_t i = 0; i < a.value.size(); ++i)
+    {
+        int32_t aVal = a.value[i];
+        int32_t bVal = i < b.value.size() ? b.value[i] : 0;
+
+        int32_t diff = aVal - bVal - borrow;
+
+        if (diff < 0)
         {
-            difference += 10;
+            diff += 10000;
             borrow = 1;
         }
         else
+        {
             borrow = 0;
+        }
 
-        result.value.push_back(static_cast<char>(difference + '0'));
+        result.value.push_back(diff);
     }
+
     result.StripZeros();
     return result;
 }
 
+// Operator Overloading
+
 BigInt BigInt::operator+(const BigInt &other) const
 {
-    /*Both Number are negative return sum and just negate it*/
     if (isNegative == other.isNegative)
     {
         BigInt result = addAbsolute(*this, other);
         result.isNegative = isNegative;
         return result;
     }
-    /*If one is negative, sum of them is just difference*/
-    else if (compareAbsolute(*this, other) >= 0)
-    {
-        BigInt result = subAbsolute(*this, other);
-        result.isNegative = isNegative;
-        return result;
-    }
     else
     {
-        BigInt result = subAbsolute(other, *this);
-        result.isNegative = other.isNegative;
-        return result;
+        if (compareAbsolute(*this, other) >= 0)
+        {
+            BigInt result = subAbsolute(*this, other);
+            result.isNegative = isNegative;
+            return result;
+        }
+        else
+        {
+            BigInt result = subAbsolute(other, *this);
+            result.isNegative = other.isNegative;
+            return result;
+        }
     }
 }
 
 BigInt BigInt::operator-(const BigInt &other) const
 {
-    if (isNegative == !other.isNegative)
+    if (isNegative != other.isNegative)
     {
         BigInt result = addAbsolute(*this, other);
         result.isNegative = isNegative;
         return result;
     }
-    else if (compareAbsolute(*this, other) >= 0)
-    {
-        BigInt result = subAbsolute(*this, other);
-        result.isNegative = isNegative;
-        return result;
-    }
     else
     {
-        BigInt result = subAbsolute(other, *this);
-        result.isNegative = other.isNegative;
-        return result;
+        if (compareAbsolute(*this, other) >= 0)
+        {
+            BigInt result = subAbsolute(*this, other);
+            result.isNegative = isNegative;
+            return result;
+        }
+        else
+        {
+            BigInt result = subAbsolute(other, *this);
+            result.isNegative = !isNegative;
+            return result;
+        }
     }
 }
 
 BigInt BigInt::operator*(const BigInt &other) const
 {
     BigInt result;
-    int n = value.size();
-    int m = other.size();
-    std::vector<int> product(n + m, 0);
+    uint32_t BASE = 10000;
+    result.value.resize(value.size() + other.value.size(), 0);
     result.isNegative = (isNegative != other.isNegative);
 
-    for (int i = 0; i < n; ++i)
+    for (size_t i = 0; i < value.size(); i++)
     {
-        for (int j = 0; j < m; ++j)
+        uint64_t carry = 0;
+        for (size_t j = 0; j < other.value.size() || carry != 0; j++)
         {
-            product[i + j] += (value[i] - '0') * (other.value[j] - '0');
+            uint64_t curr = result.value[i + j] + carry;
+            if (j < other.value.size())
+                curr += (uint64_t)value[i] * other.value[j];
+            result.value[i + j] = (uint32_t)(curr % BASE);
+            carry = curr / BASE;
         }
     }
-    for (int i = 0; i < product.size(); ++i)
-    {
-        if (product[i] >= 10)
-        {
-            if (i + 1 < product.size())
-                product[i + 1] += product[i] / 10;
-            product[i] %= 10;
-        }
-    }
-    result.value = "";
-    for (int i = 0; i < product.size(); ++i)
-        result.value.push_back(product[i] + '0');
-
     result.StripZeros();
+    if (result.value.size() == 1 && result.value[0] == 0)
+        result.isNegative = false;
     return result;
 }
 
-int BigInt::compareAbsolute(const BigInt &BigInt1, const BigInt &BigInt2)
+bool BigInt::operator==(const BigInt &other) const
 {
-    if (BigInt1.size() > BigInt2.size())
-        return 1;
-    if (BigInt1.size() < BigInt2.size())
-        return -1;
+    return isNegative == other.isNegative && value == other.value;
+}
 
-    for (int i = BigInt1.size() - 1; i >= 0; --i)
-    {
-        if (BigInt1.value[i] > BigInt2.value[i])
-            return 1;
-        else if (BigInt1.value[i] < BigInt2.value[i])
-            return -1;
-    }
-    return 0;
+bool BigInt::operator!=(const BigInt &other) const
+{
+    return !(*this == other);
+}
+
+bool BigInt::operator<(const BigInt &other) const
+{
+    if (isNegative != other.isNegative)
+        return isNegative;
+
+    int cmp = compareAbsolute(*this, other);
+    return isNegative ? cmp > 0 : cmp < 0;
+}
+
+bool BigInt::operator>(const BigInt &other) const
+{
+    return other < *this;
+}
+
+bool BigInt::operator<=(const BigInt &other) const
+{
+    return !(*this > other);
+}
+
+bool BigInt::operator>=(const BigInt &other) const
+{
+    return !(*this < other);
+}
+
+std::string BigInt::toString() const
+{
+    if (value.empty())
+        return "0";
+
+    std::ostringstream oss;
+    if (isNegative)
+        oss << '-';
+
+    oss << value.back(); // first (most significant) group
+
+    for (int i = value.size() - 2; i >= 0; --i)
+        oss << std::setw(4) << std::setfill('0') << value[i];
+
+    return oss.str();
 }
 
 std::ostream &operator<<(std::ostream &out, const BigInt &val)
 {
-    if (val.isNegative)
-        out << "-";
-    for (int i = val.size() - 1; i >= 0; --i)
-        out << val.value[i];
+    std::string s = val.toString();
+    if (s.find_first_of('-') != std::string::npos && val.size() == 1 && s[1] == '0')
+        out << s.substr(1);
+    else
+        out << s;
     return out;
 }
+
 std::istream &operator>>(std::istream &in, BigInt &val)
 {
     std::string s;
@@ -208,30 +266,8 @@ std::istream &operator>>(std::istream &in, BigInt &val)
     val = BigInt(s);
     return in;
 }
-bool BigInt::operator==(const BigInt &other) const
+
+size_t BigInt::size() const
 {
-    return (value == other.value && isNegative == other.isNegative);
-}
-bool BigInt::operator!=(const BigInt &other) const
-{
-    return !(*this == other);
-}
-bool BigInt::operator<(const BigInt &other) const
-{
-    if (isNegative != other.isNegative)
-        return isNegative;
-    int c = compareAbsolute(*this, other);
-    return isNegative ? (c > 0) : (c < 0);
-}
-bool BigInt::operator>(const BigInt &other) const
-{
-    return other < *this;
-}
-bool BigInt::operator<=(const BigInt &other) const
-{
-    return !(*this > other);
-}
-bool BigInt::operator>=(const BigInt &other) const
-{
-    return !(*this < other);
+    return value.size();
 }

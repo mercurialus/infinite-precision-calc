@@ -30,13 +30,20 @@ std::string padLeft(const std::string &x, int n)
     return padded;
 }
 
-BigInt mulBy10power_reversed(BigInt &x, int m)
+std::pair<std::string, uint32_t> divideDecimalString(const std::string &numStr, uint64_t divisor)
 {
-    if (x.value == "0" || x.size() == 0)
-        return x;
+    std::string result;
+    uint64_t rem = 0;
 
-    BigInt result;
-    result.value.clear();
-    result.value = std::string(m, '0') + x.value;
-    return result;
+    for (char ch : numStr)
+    {
+        rem = rem * 10 + (ch - '0');
+        if (!result.empty() || rem >= divisor)
+            result += (rem / divisor) + '0';
+        rem %= divisor;
+    }
+
+    if (result.empty())
+        result = "0";
+    return {result, static_cast<uint32_t>(rem)};
 }

@@ -3,11 +3,12 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 class BigInt
 {
 private:
-    std::string value; // Will be storing in reverse for ease of implementation
+    std::vector<uint32_t> value; // Will be storing in reverse for ease of implementation
     bool isNegative;
 
     void StripZeros();
@@ -37,12 +38,15 @@ public:
     friend std::ostream &operator<<(std::ostream &out, const BigInt &val);
     friend std::istream &operator>>(std::istream &in, BigInt &val);
 
+    // Custom toString converter for
+    // pretty-printing (will be helpful in stream overloading)
+    std::string toString() const;
+
     // Friend Functions for easy implementation
     friend BigInt karatsubaMultiply(const BigInt &x, const BigInt &y);
 
     // Utils
-    std::string toString() const;
-    int size() const;
+    size_t size() const;
     friend BigInt mulBy10power_reversed(BigInt &x, int m);
     friend BigInt padRight(BigInt &BigInt1, int n);
     friend BigInt padLeft(BigInt &BigInt1, int n);
