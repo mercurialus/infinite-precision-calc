@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <stdexcept>
+using std::cout, std::endl;
 
 // Constructors
 BigInt::BigInt() : isNegative(false) {}
@@ -122,7 +123,6 @@ BigInt BigInt::subAbsolute(const BigInt &a, const BigInt &b)
 }
 
 // Operator Overloading
-
 BigInt BigInt::operator+(const BigInt &other) const
 {
     if (isNegative == other.isNegative)
@@ -188,6 +188,7 @@ BigInt BigInt::operator*(const BigInt &other) const
             uint64_t curr = result.value[i + j] + carry;
             if (j < other.value.size())
                 curr += (uint64_t)value[i] * other.value[j];
+
             result.value[i + j] = (uint32_t)(curr % BASE);
             carry = curr / BASE;
         }
